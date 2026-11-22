@@ -1,0 +1,45 @@
+/**
+ * MongoDB Shell Migration: Set Existing Tenants as Non-Trial
+ * 
+ * Run these commands in MongoDB shell (mongosh) or MongoDB Atlas shell
+ * This migration sets existing tenants to trial: false since they are established customers
+ * Execute them in order:
+ */
+
+// 1. First, let's see how many tenants are currently on trial
+db.tenant.countDocuments({ trial: true })
+
+// 2. Check all tenants to see current trial status
+db.tenant.find({}, { name: 1, businessName: 1, trial: 1, createdDate: 1 }).pretty()
+
+// 3. BACKUP: Create a backup of current tenant data before migration
+// (Run this in your backup system or create a manual export)
+
+// 4. Set all existing tenants to non-trial status
+// This assumes all current tenants are legitimate established customers
+db.tenant.updateMany(
+  { trial: { $ne: false } },  // Update all tenants that are not already trial: false
+  { 
+    $set: { 
+      trial: false,                           // Remove trial status
+      updatedDate: new Date().toLocaleDateString()
+    } 
+  }
+)
+
+// 5. Verify the migration worked correctly
+db.tenant.countDocuments({ trial: false })
+
+// 6. Double-check: should be 0 tenants still on trial after migration
+db.tenant.countDocuments({ trial: true })
+
+// 7. Show updated tenant statuses
+db.tenant.find({}, { name: 1, businessName: 1, trial: 1, updatedDate: 1 }).pretty()
+
+/**
+ * IMPORTANT NOTES:
+ * - This migration assumes ALL current tenants should be converted to non-trial
+ * - New signups after this migration will still be created with trial: true initially
+ * - Make sure to backup your data before running this migration
+ * - Test this on a staging environment first if possible
+ */

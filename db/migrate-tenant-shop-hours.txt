@@ -1,0 +1,27 @@
+/**
+ * MongoDB Shell Migration: Add shopHours to Tenants
+ * 
+ * Run these commands in MongoDB shell (mongosh) or MongoDB Atlas shell
+ * Execute them in order:
+ */
+
+// 1. First, let's see how many tenants need migration
+db.tenant.countDocuments({ shopHours: { $exists: false } })
+
+// 2. Check all tenants to see what we're working with
+db.tenant.countDocuments({})
+
+// 3. Update all tenants with default shop hours (Monday-Friday, 9AM-6PM)
+db.tenant.updateMany(
+  {},  // Update ALL tenants
+  { 
+    $set: { 
+      shopHours: {
+        daysOpen: [3, 4, 2, 6, 5],  // Monday to Friday
+        openHour: 9,                 // 9:00 AM
+        closeHour: 18                // 6:00 PM
+      },
+      updatedDate: new Date().toLocaleDateString()
+    } 
+  }
+)

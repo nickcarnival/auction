@@ -1,0 +1,78 @@
+/**
+ * MongoDB Shell Migration: Add isConfirmed to Appointments
+ * 
+ * Run these commands in MongoDB shell (mongosh) or MongoDB Atlas shell
+ * Execute them in order:
+ */
+
+// 1. First, let's see how many appointments need migration
+db.appointments.countDocuments({ isConfirmed: { $exists: false } })
+
+// 2. Check how many appointments have booking request IDs
+db.appointments.countDocuments({ 
+  isConfirmed: { $exists: false }, 
+  bookingRequestId: { $exists: true, $ne: null } 
+})
+
+// 3. Update appointments that have booking request IDs
+// We need to do this with a forEach loop since $lookup isn't allowed in updates
+db.appointments.find({ 
+  isConfirmed: { $exists: false },
+  bookingRequestId: { $exists: true, $ne: null }
+}).forEach(function(appointment) {
+  // Find the corresponding booking request
+  var bookingRequest = db.getCollection("booking-request").findOne({ _id: appointment.bookingRequestId });
+  
+  // Set isConfirmed based on booking request, default to false
+  var isConfirmed = bookingRequest && bookingRequest.isConfirmed ? bookingRequest.isConfirmed : false;
+  
+  // Update the appointment
+  db.appointments.updateOne(
+    { _id: appointment._id },
+    { 
+      $set: { 
+        isConfirmed: isConfirmed,
+        updatedDate: new Date().toISOString()
+      } 
+    }
+  );
+})
+
+// 4. Update remaining appointments (those without booking request IDs) to isConfirmed: false
+db.appointments.updateMany(
+  { isConfirmed: { $exists: false } },
+  { 
+    $set: { 
+      isConfirmed: false,
+      updatedDate: new Date().toISOString()
+    } 
+  }
+)
+
+// 5. Verify the migration - should return 0
+db.appointments.countDocuments({ isConfirmed: { $exists: false } })
+
+// 6. Check the results - count confirmed vs pending
+db.appointments.aggregate([
+  {
+    $group: {
+      _id: "$isConfirmed",
+      count: { $sum: 1 }
+    }
+  },
+  {
+    $project: {
+      status: { $cond: { if: "$_id", then: "confirmed", else: "pending" } },
+      count: 1,
+      _id: 0
+    }
+  }
+])
+
+/**
+ * Expected output from step 6:
+ * [
+ *   { "status": "pending", "count": X },
+ *   { "status": "confirmed", "count": Y }
+ * ]
+ */

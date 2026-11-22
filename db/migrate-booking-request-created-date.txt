@@ -1,0 +1,80 @@
+/**
+ * MongoDB Shell Migration: Add createdDate to Booking Requests
+ * 
+ * Run these commands in MongoDB Atlas shell
+ * Execute them in order:
+ */
+
+// 1. First, let's see how many booking requests need migration
+db.getCollection("booking-request").countDocuments({ createdDate: { $exists: false } })
+
+// 2. Check how many have end dates we can use
+db.getCollection("booking-request").countDocuments({ 
+  createdDate: { $exists: false }, 
+  end: { $exists: true, $ne: null, $ne: "" } 
+})
+
+// 3. Update booking requests using end date as createdDate, fallback to start date, then today
+db.getCollection("booking-request").find({
+  createdDate: { $exists: false }
+}).forEach(function(bookingRequest) {
+  var createdDate = new Date(); // Default to today
+  
+  // Try to parse end date first (preferred since it's likely closer to actual creation)
+  if (bookingRequest.end && typeof bookingRequest.end === 'string') {
+    var endParts = bookingRequest.end.split('/');
+    if (endParts.length === 3) {
+      var endDate = new Date(parseInt(endParts[2]), parseInt(endParts[0]) - 1, parseInt(endParts[1]));
+      if (!isNaN(endDate.getTime()) && endDate.getFullYear() >= 2000 && endDate.getFullYear() <= 2030) {
+        createdDate = endDate;
+      }
+    }
+  }
+  
+  // Fallback to start date if end date parsing failed
+  if (createdDate.toDateString() === new Date().toDateString() && bookingRequest.start && typeof bookingRequest.start === 'string') {
+    var startParts = bookingRequest.start.split('/');
+    if (startParts.length === 3) {
+      var startDate = new Date(parseInt(startParts[2]), parseInt(startParts[0]) - 1, parseInt(startParts[1]));
+      if (!isNaN(startDate.getTime()) && startDate.getFullYear() >= 2000 && startDate.getFullYear() <= 2030) {
+        createdDate = startDate;
+      }
+    }
+  }
+  
+  // Update the booking request
+  db.getCollection("booking-request").updateOne(
+    { _id: bookingRequest._id },
+    { 
+      $set: { 
+        createdDate: createdDate,
+        updatedDate: new Date().toLocaleDateString()
+      } 
+    }
+  );
+})
+
+// 4. Verify the migration - should return 0
+db.getCollection("booking-request").countDocuments({ createdDate: { $exists: false } })
+
+// 5. Check the results - count by date type
+db.getCollection("booking-request").aggregate([
+  {
+    $addFields: {
+      createdDateType: { $type: "$createdDate" }
+    }
+  },
+  {
+    $group: {
+      _id: "$createdDateType",
+      count: { $sum: 1 }
+    }
+  }
+])
+
+/**
+ * Expected output from step 5:
+ * [
+ *   { "_id": "date", "count": X }  // All should be Date objects
+ * ]
+ */

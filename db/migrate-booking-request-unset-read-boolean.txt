@@ -1,0 +1,13 @@
+/**
+ * Optional: remove legacy `read` boolean from booking-request documents.
+ * Read state is represented by readAt (null = unread).
+ *
+ * mongosh / Atlas — use `use("booking")` if needed. Safe to re-run.
+ */
+
+db.getCollection("booking-request").countDocuments({ read: { $exists: true } });
+
+db.getCollection("booking-request").updateMany(
+  { read: { $exists: true } },
+  { $unset: { read: "" } }
+);

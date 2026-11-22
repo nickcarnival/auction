@@ -1,0 +1,325 @@
+@import '@fontsource/alfa-slab-one';
+@import '@fontsource-variable/merriweather-sans';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /*
+     * Palette from your shared `.theme-dark` export (`--color-d-*`). We use it as a warm light UI:
+     * cream surfaces, brown ink, shared accent hues. Raw tokens + app semantics below.
+     */
+    --color-d-whiter: 33 66% 90%;
+    --color-d-white: 34 50% 80%;
+    --color-d-gray-10: 34 18% 62%;
+    --color-d-gray-20: 35 27% 55%;
+    --color-d-gray-30: 34 24% 30%;
+    --color-d-gray-40: 33 22% 30%;
+    --color-d-gray-50: 33 20% 20%;
+    --color-d-gray-60: 30 19% 17%;
+    --color-d-gray-70: 27 14% 15%;
+    --color-d-gray-80: 32 19% 13%;
+    --color-d-gray-90: 30 15% 13%;
+    --color-d-gray-100: 30 20% 8%;
+    --color-d-black: 27 15% 12%;
+    --color-d-blacker: 26 16% 9%;
+    --color-d-shadow-10: rgba(29, 21, 13, 0.45);
+    --color-d-shadow-50: rgba(29, 26, 22, 0.75);
+    --color-d-shadow-100: rgba(19, 16, 13, 0.95);
+    --color-d-shadow-cover: rgba(37, 34, 29, 0.74);
+    --color-d-yellow-300: 46 91% 69%;
+    --color-d-yellow-500: 50 100% 46%;
+    --color-d-yellow-700: 43 100% 42%;
+    --color-d-yellow-900: 39 92% 33%;
+    --color-d-yellow-a: 43 75% 52%;
+    --color-d-red-300: 4 100% 68%;
+    --color-d-red-500: 4 65% 60%;
+    --color-d-red-700: 4 90% 61%;
+    --color-d-red-900: 4 77% 38%;
+    --color-d-red-a: 4 61% 53%;
+    --color-d-blue-300: 198 39% 56%;
+    --color-d-blue-500: 198 62% 57%;
+    --color-d-blue-700: 198 57% 55%;
+    --color-d-blue-900: 198 75% 35%;
+    --color-d-blue-a: 197 58% 48%;
+    --color-d-orange-300: 22 92% 64%;
+    --color-d-orange-500: 22 92% 57%;
+    --color-d-orange-700: 21 88% 51%;
+    --color-d-orange-900: 20 80% 41%;
+    --color-d-orange-a: 27 77% 51%;
+    --color-d-green-300: 150 66% 53%;
+    --color-d-green-500: 154 52% 46%;
+    --color-d-green-700: 154 61% 39%;
+    --color-d-green-900: 155 81% 24%;
+    --color-d-green-a: 96 50% 49%;
+    --color-d-violet-300: 256 63% 74%;
+    --color-d-violet-500: 263 60% 67%;
+    --color-d-violet-700: 256 52% 57%;
+    --color-d-violet-900: 256 44% 50%;
+    --color-d-violet-a: 246 53% 67%;
+    --ui-color-highlight-bg: 43 61% 56%;
+    --color-highlight-yellow: 48 100% 50% / 0.2;
+    --color-highlight-red: 351 85% 63% / 0.2;
+    --color-highlight-blue: 187 63% 47% / 0.2;
+    --color-highlight-orange: 27 100% 50% / 0.2;
+    --color-highlight-green: 78 68% 44% / 0.2;
+    --color-highlight-violet: 236 100% 72% / 0.2;
+
+    --brand-accent: var(--color-d-gray-50);
+    --brand-accent-deep: var(--color-d-gray-60);
+
+    --background: var(--color-d-whiter);
+    /* Slightly deeper ink than gray-100 for body + buttons on cream (less “muddy” small text) */
+    --foreground: var(--color-d-black);
+    --card: var(--color-d-white);
+    --card-foreground: var(--foreground);
+    --popover: var(--color-d-white);
+    --popover-foreground: var(--foreground);
+
+    --primary: var(--brand-accent);
+    --primary-foreground: var(--color-d-whiter);
+    --primary-muted: 33 45% 84%;
+    --primary-deep: var(--brand-accent-deep);
+    /** Filled primary / solid buttons — clearer step than `primary-deep` (~17%L vs ~20%L). */
+    --primary-hover: var(--color-d-gray-70);
+
+    --secondary: var(--color-d-gray-20);
+    /* Dark label on taupe secondary — light-on-mid-brown failed WCAG / felt washed out */
+    --secondary-foreground: var(--foreground);
+
+    --muted: 33 38% 86%;
+    --muted-foreground: var(--color-d-gray-30);
+
+    --accent: 33 36% 82%;
+    --accent-foreground: var(--color-d-gray-100);
+
+    --destructive: var(--color-d-red-500);
+    --destructive-foreground: var(--color-d-whiter);
+    --destructive-hover: var(--color-d-red-900);
+
+    --warning: var(--color-d-yellow-500);
+    --warning-foreground: var(--color-d-gray-100);
+    --warning-subtle: 46 85% 94%;
+    --warning-subtle-border: var(--color-d-yellow-300);
+    --warning-emphasis: var(--color-d-yellow-900);
+    --warning-highlight: var(--color-d-yellow-700);
+
+    --success: var(--color-d-green-500);
+    --success-foreground: var(--color-d-whiter);
+    --success-hover: var(--color-d-green-900);
+    --success-subtle: 152 55% 92%;
+    --success-subtle-foreground: var(--color-d-green-900);
+
+    --info: 198 55% 94%;
+    --info-foreground: var(--color-d-blue-900);
+
+    --neutral: var(--color-d-gray-30);
+
+    --action: var(--color-d-blue-500);
+    --action-hover: var(--color-d-blue-700);
+
+    --border: var(--color-d-gray-10);
+    --input: var(--color-d-gray-10);
+    --ring: var(--color-d-yellow-500);
+    --chart-1: var(--color-d-orange-500);
+    --chart-2: var(--color-d-green-500);
+    --chart-3: var(--color-d-blue-900);
+    --chart-4: var(--color-d-yellow-500);
+    --chart-5: var(--color-d-violet-500);
+    /** Default corner radius (`rounded-lg`, calendar toolbar groups). Middle ground vs chip rounding (`rounded-xs`). */
+    --radius: 0.25rem;
+    /** react-big-calendar: grid chrome + event chips; work week uses `--radius-calendar-work-week` */
+    --radius-calendar: var(--radius);
+    /** Between Tailwind xs (0.25rem) and md (0.5rem) — work-week bordered chips only */
+    --radius-calendar-work-week: 0.375rem;
+
+    --sidebar-background: var(--color-d-white);
+    --sidebar-foreground: var(--color-d-gray-100);
+    --sidebar-primary: var(--color-d-gray-50);
+    --sidebar-primary-foreground: var(--color-d-whiter);
+    --sidebar-accent: 33 36% 82%;
+    --sidebar-accent-foreground: var(--color-d-gray-100);
+    --sidebar-border: var(--color-d-gray-10);
+    --sidebar-ring: var(--color-d-gray-30);
+
+    --html-background: var(--color-d-blacker);
+
+    /* Resource chips — colored fill/border; one shared dark ink for labels */
+    /* Blue: indigo/periwinkle (~224°) so it doesn’t read like Teal or mint Green */
+    --chip-1-background: 224 48% 72%;
+    --chip-1-foreground: var(--color-d-gray-100);
+    --chip-1-border: 224 46% 40%;
+    /* Still “Red” / “Green” in the UI & DB — warm terracotta + soft sage, not stoplight hues */
+    --chip-2-background: var(--color-d-orange-300);
+    --chip-2-foreground: var(--color-d-gray-100);
+    --chip-2-border: var(--color-d-orange-700);
+    /* Green: yellow–leaf (~118°), farther from blue-teal than old 154° sage */
+    --chip-3-background: 118 32% 74%;
+    --chip-3-foreground: var(--color-d-gray-100);
+    --chip-3-border: 118 36% 36%;
+    /* Bright “sun” yellow (picker label Yellow) */
+    --chip-4-background: var(--color-d-yellow-300);
+    --chip-4-foreground: var(--color-d-gray-100);
+    --chip-4-border: var(--color-d-yellow-700);
+    --chip-5-background: var(--color-d-violet-300);
+    --chip-5-foreground: var(--color-d-gray-100);
+    --chip-5-border: var(--color-d-violet-700);
+    --chip-6-background: var(--color-d-gray-10);
+    --chip-6-foreground: var(--color-d-gray-100);
+    --chip-6-border: var(--color-d-gray-50);
+    /* Teal: sea green (~168°) — between older cyan-teal and green, not indigo Blue */
+    --chip-7-background: 168 40% 70%;
+    --chip-7-foreground: var(--color-d-gray-100);
+    --chip-7-border: 168 48% 34%;
+
+    --rbc-ink: var(--color-d-gray-100);
+    --rbc-surface-paper: var(--color-d-white);
+    --rbc-off-range-fg: var(--color-d-gray-10);
+    --rbc-off-range-bg: 33 38% 86%;
+    --rbc-border: 34 18% 58%;
+    --rbc-today-highlight: var(--color-d-violet-500);
+    --rbc-today-highlight-alpha: 0.22;
+    --rbc-toolbar-fg: var(--color-d-gray-30);
+    --rbc-toolbar-border: 35 22% 58%;
+    --rbc-toolbar-shadow-alpha: 0.14;
+    --rbc-toolbar-border-strong: 34 18% 52%;
+    --rbc-toolbar-bg-pressed: 33 35% 78%;
+    --rbc-toolbar-border-emphasis: var(--color-d-gray-20);
+    --rbc-event-fallback-bg: var(--color-d-blue-700);
+    --rbc-event-fallback-bg-strong: var(--color-d-blue-900);
+    --rbc-event-focus-ring: var(--color-d-yellow-500);
+    --rbc-event-overlap-shadow: var(--color-d-gray-100);
+    --rbc-event-overlap-shadow-alpha: 0.45;
+    --rbc-selection-mask-alpha: 0.12;
+    --rbc-show-more-bg-alpha: 0.32;
+    --rbc-overlay-edge: 34 18% 62%;
+    --rbc-overlay-shadow-alpha: 0.28;
+    --rbc-slot-subdivide: 33 42% 88%;
+    --rbc-slot-drag-mask-alpha: 0.5;
+    --rbc-dnd-mask-alpha: 0.32;
+    --rbc-event-shell-bg: transparent;
+
+    /**
+     * Appointment / status accents — use via `status-*` and `text-action` instead of Tailwind default blues/greens/purples.
+     */
+    --status-dyno: var(--color-d-blue-700);
+    --status-vacation: var(--color-d-violet-900);
+    --status-vacation-soft: var(--color-d-violet-300);
+    /** Lavender-tint base for vacation hatch fill (see vacation-event). */
+    --vacation-card-surface: 270 55% 96%;
+
+    /** Settings: HTML email preview frame (light gray panel). */
+    --email-preview-bg: 220 14% 93%;
+
+    /** Modal / drawer backdrop — ink at opacity via `bg-overlay` in Tailwind */
+    --overlay: 30 20% 8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    /* Firefox — thumb | track (track matches app canvas) */
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.38) hsl(var(--background));
+  }
+
+  /* WebKit — vertical + horizontal share these; corner matches track when both show */
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.35);
+    border-radius: 5px;
+    border: 2px solid hsl(var(--background));
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: hsl(var(--background));
+  }
+
+  html {
+    @apply bg-html-background;
+    height: 100%;
+    /* No document scrollbar; scrolling lives inside #root / route panes. */
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  #root {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Schedule “placement” mode — screen-share / capture preview frame */
+@keyframes placement-capture-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px hsl(var(--warning) / 0.55),
+      0 0 18px hsl(var(--warning) / 0.22),
+      inset 0 0 0 1px hsl(var(--warning-highlight) / 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px hsl(var(--warning) / 0.85),
+      0 0 36px hsl(var(--warning) / 0.38),
+      inset 0 0 0 1px hsl(var(--warning-highlight) / 0.22);
+  }
+}
+
+@layer components {
+  /* Replaces the default `.rbc-time-view` / `.rbc-month-view` shell (see calendar.css). */
+  [data-schedule-placement] .rbc-time-view,
+  [data-schedule-placement] .rbc-month-view {
+    border: 2px solid hsl(var(--warning));
+    animation: placement-capture-glow 2.8s ease-in-out infinite;
+  }
+
+  [data-schedule-placement] .rbc-agenda-view table.rbc-agenda-table {
+    border: 2px solid hsl(var(--warning));
+    animation: placement-capture-glow 2.8s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-schedule-placement] .rbc-time-view,
+    [data-schedule-placement] .rbc-month-view {
+      animation: none;
+      box-shadow:
+        0 0 0 1px hsl(var(--warning) / 0.6),
+        0 0 24px hsl(var(--warning) / 0.28),
+        inset 0 0 0 1px hsl(var(--warning-highlight) / 0.15);
+    }
+
+    [data-schedule-placement] .rbc-agenda-view table.rbc-agenda-table {
+      animation: none;
+      box-shadow:
+        0 0 0 1px hsl(var(--warning) / 0.6),
+        0 0 18px hsl(var(--warning) / 0.22),
+        inset 0 0 0 1px hsl(var(--warning-highlight) / 0.15);
+    }
+  }
+}

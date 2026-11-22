@@ -1,0 +1,324 @@
+/**
+ * MongoDB Shell: merge duplicate customers for ONE tenant (mongosh / Atlas)
+ *
+ * Uses the same data moves as the app merge: re-home appointments + booking-request,
+ * soft-delete merged profiles, sync denormalized contact on appointments for the kept row.
+ *
+ * Duplicate detection here (Mongo only) groups by:
+ *   - phoneNormalized (non-empty), then
+ *   - email — emailNormalized when set, else trim + lowercase email
+ *
+ * This is close to but not identical to the dashboard merge suggestions (name / fuzzy / composite
+ * rules are not replicated here). Use the dashboard for ambiguous cases.
+ *
+ * Keeper: lexicographically smallest _id in the cluster (NOT “most appointments” like the UI).
+ *
+ * Run on a test tenant first: DRY_RUN + inspection, then DRY_RUN false with APPLY_PHONE /
+ * APPLY_EMAIL and a low MAX_MERGE_GROUPS.
+ */
+
+// ---------- EDIT ----------
+var TENANT_HEX = "aaaaaaaaaaaaaaaaaaaaaaaa"; // 24-char hex tenant _id
+
+/** If true, only prints duplicate clusters — no writes. */
+var DRY_RUN = true;
+
+/** After you trust preview, set false to mutate. You can do phone-only first, then email. */
+var APPLY_PHONE = false;
+var APPLY_EMAIL = false;
+
+/** Safety cap per kind (null = no cap). Use 1–5 on staging. */
+var MAX_MERGE_GROUPS = 5;
+// ---------- END EDIT ----------
+
+var tenantOid = ObjectId(TENANT_HEX);
+var tenantMatch = { $or: [{ tenantId: tenantOid }, { tenantId: TENANT_HEX }] };
+var activeMatch = { $or: [{ deletedAt: { $exists: false } }, { deletedAt: null }] };
+
+function mergeOneClusterShell(keepOid, mergeHexStrings) {
+  var KEEP_HEX = keepOid.toHexString();
+  var uniqueMerge = [];
+  for (var i = 0; i < mergeHexStrings.length; i++) {
+    if (mergeHexStrings[i] !== KEEP_HEX) uniqueMerge.push(mergeHexStrings[i]);
+  }
+  uniqueMerge = uniqueMerge.filter(function (h, idx, arr) {
+    return arr.indexOf(h) === idx;
+  });
+  if (uniqueMerge.length === 0) return;
+
+  var mergeOids = uniqueMerge.map(function (h) {
+    return ObjectId(h);
+  });
+  var idClause = {
+    $or: [
+      { customerId: { $in: mergeOids } },
+      { customerId: { $in: uniqueMerge } },
+      {
+        $expr: {
+          $in: [{ $toString: { $ifNull: ["$customerId", ""] } }, uniqueMerge],
+        },
+      },
+    ],
+  };
+  var tenantAndIds = { $and: [tenantMatch, idClause] };
+
+  var findKeep = {
+    $and: [tenantMatch, { _id: keepOid }, activeMatch],
+  };
+  var keepRow = db.customers.findOne(findKeep, { projection: { name: 1, email: 1, phone: 1 } });
+  if (!keepRow) {
+    print("SKIP: keeper not found or archived " + KEEP_HEX);
+    return;
+  }
+  var finalName =
+    keepRow.name && typeof keepRow.name === "string" && keepRow.name.trim()
+      ? keepRow.name.trim()
+      : "";
+  if (!finalName) {
+    print("SKIP: keeper has empty name " + KEEP_HEX);
+    return;
+  }
+  var finalEmail =
+    keepRow.email && String(keepRow.email).trim() ? String(keepRow.email).trim() : null;
+  var finalPhone =
+    keepRow.phone && String(keepRow.phone).trim() ? String(keepRow.phone).trim() : null;
+
+  db.appointments.updateMany(tenantAndIds, {
+    $set: { customerId: keepOid, customer: finalName },
+  });
+  db.getCollection("booking-request").updateMany(tenantAndIds, {
+    $set: { customerId: keepOid },
+  });
+
+  var keepIdClause = {
+    $or: [
+      { customerId: keepOid },
+      { customerId: KEEP_HEX },
+      {
+        $expr: {
+          $eq: [{ $toString: { $ifNull: ["$customerId", ""] } }, KEEP_HEX],
+        },
+      },
+    ],
+  };
+  var tenantAndKeep = { $and: [tenantMatch, keepIdClause] };
+
+  db.appointments.updateMany(tenantAndKeep, {
+    $set: {
+      customer: finalName,
+      email: finalEmail,
+      phone: finalPhone,
+    },
+  });
+
+  var nowIso = new Date().toISOString();
+  var nowLocale = new Date().toLocaleDateString();
+  uniqueMerge.forEach(function (hex) {
+    db.customers.updateOne(
+      {
+        $and: [tenantMatch, { _id: ObjectId(hex) }, activeMatch],
+      },
+      {
+        $set: {
+          deletedAt: nowIso,
+          mergedIntoCustomerId: KEEP_HEX,
+          updatedDate: nowLocale,
+        },
+      }
+    );
+  });
+
+  printjson({
+    ok: true,
+    kept: KEEP_HEX,
+    merged: uniqueMerge,
+  });
+}
+
+// --- PREVIEW: duplicate clusters (read-only) ---
+var phonePreview = db.customers
+  .aggregate([
+    {
+      $match: {
+        $and: [
+          tenantMatch,
+          activeMatch,
+          { phoneNormalized: { $exists: true, $type: "string", $ne: "" } },
+        ],
+      },
+    },
+    { $group: { _id: "$phoneNormalized", ids: { $push: "$_id" }, n: { $sum: 1 } } },
+    { $match: { n: { $gte: 2 } } },
+    { $sort: { n: -1 } },
+  ])
+  .toArray();
+
+var emailPreview = db.customers
+  .aggregate([
+    {
+      $match: {
+        $and: [tenantMatch, activeMatch, { email: { $exists: true, $nin: [null, ""] } }],
+      },
+    },
+    {
+      $addFields: {
+        emailKey: {
+          $cond: {
+            if: {
+              $and: [
+                { $ne: [{ $ifNull: ["$emailNormalized", ""] }, ""] },
+                { $eq: [{ $type: "$emailNormalized" }, "string"] },
+              ],
+            },
+            then: "$emailNormalized",
+            else: {
+              $toLower: {
+                $trim: {
+                  input: {
+                    $convert: {
+                      input: { $ifNull: ["$email", ""] },
+                      to: "string",
+                      onError: "",
+                      onNull: "",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    { $match: { emailKey: { $ne: "" } } },
+    { $group: { _id: "$emailKey", ids: { $push: "$_id" }, n: { $sum: 1 } } },
+    { $match: { n: { $gte: 2 } } },
+    { $sort: { n: -1 } },
+  ])
+  .toArray();
+
+print("--- PREVIEW (tenant " + TENANT_HEX + ") ---");
+print("Phone-normalized duplicate groups: " + phonePreview.length);
+print("Email-key duplicate groups: " + emailPreview.length);
+
+if (DRY_RUN) {
+  print("DRY_RUN sample (up to 10 each):");
+  phonePreview.slice(0, 10).forEach(function (g) {
+    var ids = g.ids
+      .slice()
+      .sort(function (a, b) {
+        return a.toString().localeCompare(b.toString());
+      });
+    printjson({
+      kind: "phone",
+      key: g._id,
+      n: g.n,
+      keeper: ids[0].toHexString(),
+      merge: ids.slice(1).map(function (x) {
+        return x.toHexString();
+      }),
+    });
+  });
+  emailPreview.slice(0, 10).forEach(function (g) {
+    var ids = g.ids
+      .slice()
+      .sort(function (a, b) {
+        return a.toString().localeCompare(b.toString());
+      });
+    printjson({
+      kind: "email",
+      key: g._id,
+      n: g.n,
+      keeper: ids[0].toHexString(),
+      merge: ids.slice(1).map(function (x) {
+        return x.toHexString();
+      }),
+    });
+  });
+  print("Set DRY_RUN false and APPLY_* true when ready.");
+} else {
+  if (!APPLY_PHONE && !APPLY_EMAIL) {
+    print("DRY_RUN is false but APPLY_PHONE and APPLY_EMAIL are both false — no mutations.");
+  } else {
+    var nDone = 0;
+    if (APPLY_PHONE) {
+      for (var pi = 0; pi < phonePreview.length; pi++) {
+        if (MAX_MERGE_GROUPS != null && nDone >= MAX_MERGE_GROUPS) break;
+        var g = phonePreview[pi];
+        var pids = g.ids
+          .slice()
+          .sort(function (a, b) {
+            return a.toString().localeCompare(b.toString());
+          });
+        var pkeep = pids[0];
+        var pmerge = pids.slice(1).map(function (x) {
+          return x.toHexString();
+        });
+        mergeOneClusterShell(pkeep, pmerge);
+        nDone++;
+      }
+    }
+    if (APPLY_EMAIL) {
+      var emailFresh = db.customers
+        .aggregate([
+          {
+            $match: {
+              $and: [tenantMatch, activeMatch, { email: { $exists: true, $nin: [null, ""] } }],
+            },
+          },
+          {
+            $addFields: {
+              emailKey: {
+                $cond: {
+                  if: {
+                    $and: [
+                      { $ne: [{ $ifNull: ["$emailNormalized", ""] }, ""] },
+                      { $eq: [{ $type: "$emailNormalized" }, "string"] },
+                    ],
+                  },
+                  then: "$emailNormalized",
+                  else: {
+                    $toLower: {
+                      $trim: {
+                        input: {
+                          $convert: {
+                            input: { $ifNull: ["$email", ""] },
+                            to: "string",
+                            onError: "",
+                            onNull: "",
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          { $match: { emailKey: { $ne: "" } } },
+          { $group: { _id: "$emailKey", ids: { $push: "$_id" }, n: { $sum: 1 } } },
+          { $match: { n: { $gte: 2 } } },
+        ])
+        .toArray();
+
+      for (var ei = 0; ei < emailFresh.length; ei++) {
+        if (MAX_MERGE_GROUPS != null && nDone >= MAX_MERGE_GROUPS) break;
+        var eg = emailFresh[ei];
+        var eids = eg.ids
+          .slice()
+          .sort(function (a, b) {
+            return a.toString().localeCompare(b.toString());
+          });
+        var ekeep = eids[0];
+        var emerge = eids.slice(1).map(function (x) {
+          return x.toHexString();
+        });
+        mergeOneClusterShell(ekeep, emerge);
+        nDone++;
+      }
+    }
+    print("Applied merges this run (capped by MAX_MERGE_GROUPS on shared counter): check logs above.");
+  }
+}
+
+// --- Optional verify: active merged-target ids should be gone from customers ---
+// db.customers.countDocuments({ $and: [ tenantMatch, activeMatch, { mergedIntoCustomerId: { $exists: true } } ] })

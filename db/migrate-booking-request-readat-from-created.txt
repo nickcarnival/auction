@@ -1,0 +1,60 @@
+/**
+ * Backfill readAt for booking requests that are marked read but have no readAt
+ * (e.g. legacy data or reject flow which sets read: true without readAt).
+ * Sets readAt = createdDate.
+ *
+ * MongoDB Atlas (mongosh)
+ * - Atlas UI: your cluster → Connect → "MongoDB Shell" / open shell with your user,
+ *   or use mongosh from your machine with the same connection string.
+ * - The app uses database name: booking. If your shell is not on that DB, run
+ *   `use("booking")` (or `use booking` in older shells) first.
+ * - `updateMany` with an aggregation pipeline (step 3) needs MongoDB 4.2+ (Atlas M0+ is fine).
+ * - Run steps 1–2, confirm counts/output, then step 3. Check `result` (matched / modified) after updateMany.
+ */
+
+// use("booking")   // uncomment or run once if you are not already on the booking database
+
+// 1) How many will be updated
+db.getCollection("booking-request").countDocuments({
+  read: true,
+  $or: [{ readAt: { $exists: false } }, { readAt: null }],
+  createdDate: { $exists: true, $ne: null },
+});
+
+// 2) Peek a few
+db.getCollection("booking-request")
+  .find(
+    {
+      read: true,
+      $or: [{ readAt: { $exists: false } }, { readAt: null }],
+      createdDate: { $exists: true, $ne: null },
+    },
+    { _id: 1, read: 1, readAt: 1, createdDate: 1 }
+  )
+  .limit(5);
+
+// 3) Apply: readAt := createdDate (same BSON Date type the app uses)
+db.getCollection("booking-request").updateMany(
+  {
+    read: true,
+    $or: [{ readAt: { $exists: false } }, { readAt: null }],
+    createdDate: { $exists: true, $ne: null },
+  },
+  [{ $set: { readAt: "$createdDate" } }]
+);
+
+// 4) Re-run step 1 count — expect 0 for any doc that had createdDate
+db.getCollection("booking-request").countDocuments({
+  read: true,
+  $or: [{ readAt: { $exists: false } }, { readAt: null }],
+  createdDate: { $exists: true, $ne: null },
+});
+
+// Optional: read, still no readAt, and no createdDate (rare) — need another backfill
+// db.getCollection("booking-request").find({
+//   $and: [
+//     { read: true },
+//     { $or: [{ readAt: { $exists: false } }, { readAt: null }] },
+//     { $or: [{ createdDate: { $exists: false } }, { createdDate: null }] },
+//   ],
+// })

@@ -1,0 +1,20 @@
+{
+  "name": "@saas/shared",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf dist",
+    "dev": "tsc -b --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
+  },
+  "peerDependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

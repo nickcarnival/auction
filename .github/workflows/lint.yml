@@ -1,0 +1,155 @@
+name: Lint and Typecheck
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache ESLint
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/.eslintcache*
+          key: ${{ runner.os }}-eslint-${{ hashFiles('.eslintrc*', 'eslint.config.*') }}
+          restore-keys: |
+            ${{ runner.os }}-eslint-
+
+      - name: Cache TypeScript builds
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/*.tsbuildinfo
+            **/tsconfig.tsbuildinfo
+          key: ${{ runner.os }}-typescript-${{ hashFiles('**/tsconfig*.json') }}
+          restore-keys: |
+            ${{ runner.os }}-typescript-
+
+  lint-shared:
+    name: Lint Shared
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint shared
+        run: npm run lint:shared
+
+  lint-client:
+    name: Lint Client
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint client
+        run: npm run lint:client
+
+  lint-server:
+    name: Lint Server
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint server (no warnings)
+        run: npm run lint:server:strict
+
+  typecheck-shared:
+    name: Typecheck Shared
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck shared (strict)
+        run: npm run typecheck:shared:strict
+
+  typecheck-client:
+    name: Typecheck Client
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck client (strict)
+        run: npm run typecheck:client:strict
+
+  typecheck-server:
+    name: Typecheck Server
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck server (strict)
+        run: npm run typecheck:server:strict

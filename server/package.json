@@ -1,0 +1,73 @@
+{
+  "name": "server",
+  "version": "1.2.0",
+  "description": " A basic starter for an express.js API with Typescript",
+  "main": "src/index.ts",
+  "private": true,
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "nodemon -r tsconfig-paths/register src/index.ts",
+    "build:local": "npm i && npx esbuild src/index.ts --bundle --platform=node --outdir=dist",
+    "build": "npm run esbuild",
+    "esbuild": "npx esbuild src/index.ts --bundle --minify --platform=node --outdir=dist",
+    "prune": "echo 'Skipping prune'",
+    "prune:good": "npm prune --production",
+    "lint": "eslint --fix src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/w3cj/express-api-starter.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "moment": "^2.30.1",
+    "mongodb": "^6.12.0",
+    "morgan": "^1.10.0",
+    "resend": "^4.1.1",
+    "sanitize-html": "^2.17.0",
+    "stripe": "^17.7.0",
+    "tsconfig-paths": "^4.2.0"
+  },
+  "peerDependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.20",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.10.2",
+    "@types/sanitize-html": "^2.16.0",
+    "@types/supertest": "^6.0.2",
+    "@types/vhost": "^3.0.9",
+    "@typescript-eslint/eslint-plugin": "^7.16.1",
+    "@typescript-eslint/parser": "^7.16.1",
+    "@vitest/coverage-v8": "^2.0.0",
+    "@vitest/ui": "^2.0.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-typescript": "^18.0.0",
+    "eslint-import-resolver-typescript": "^3.6.3",
+    "eslint-plugin-import": "^2.31.0",
+    "nodemon": "^3.1.7",
+    "supertest": "^7.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.0.0"
+  }
+}
